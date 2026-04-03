@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Gym {
+  id            String         @id @default(uuid())
+  name          String
+  subdomain     String         @unique
+  description   String?
+  facilities    String?
+  instagram     String?
+  timing        String?
+  address       String?
+  announcements Announcement[]
+  users         User[]
+  plans         Plan[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+}
+
+model Plan {
+  id             String       @id @default(uuid())
+  gymId          String
+  gym            Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  name           String
+  price          Float
+  durationMonths Int
+  features       String       // Comma separated
+  memberships    Membership[]
+  createdAt      DateTime     @default(now())
+}
+
+model User {
+  id         String      @id @default(uuid())
+  email      String      @unique
+  password   String
+  phone      String?
+  role       String      @default("MEMBER") // 'SUPER_ADMIN', 'ADMIN', 'MEMBER'
+  gymId      String?
+  gym        Gym?        @relation(fields: [gymId], references: [id])
+  membership Membership?
+  payments   Payment[]
+  createdAt  DateTime    @default(now())
+}
+
+model Membership {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String?
+  plan      Plan?    @relation(fields: [planId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  status    String   // 'ACTIVE', 'EXPIRED'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Float
+  date      DateTime @default(now())
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  gymId     String
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
