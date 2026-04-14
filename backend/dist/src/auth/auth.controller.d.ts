@@ -12,4 +12,10 @@ export declare class AuthController {
         access_token: string;
         role: string;
     }>;
+    forgotPassword(body: any): Promise<{
+        message: string;
+    }>;
+    resetPassword(body: any): Promise<{
+        message: string;
+    }>;
 }

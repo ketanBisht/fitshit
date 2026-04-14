@@ -65,12 +65,14 @@ let DashboardService = class DashboardService {
                 planMap.set(m.plan.name, (planMap.get(m.plan.name) || 0) + 1);
             }
         });
+        const gym = await this.prisma.gym.findUnique({ where: { id: gymId }, select: { name: true } });
         return {
             totalMembers,
             activeMembers: active,
             expiredMembers: expired,
             expiringSoon,
             totalRevenue,
+            gymName: gym?.name || 'FitShit',
             revenueTrend: Array.from(revenueMap.entries()).map(([name, revenue]) => ({ name, revenue })).reverse(),
             genderDistribution: Array.from(genderMap.entries()).map(([name, count]) => ({ name, count })),
             planDistribution: Array.from(planMap.entries()).map(([name, count]) => ({ name, count }))

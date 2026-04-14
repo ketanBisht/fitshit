@@ -47,6 +47,8 @@ model User {
   gym        Gym?        @relation(fields: [gymId], references: [id])
   membership Membership?
   payments   Payment[]
+  resetToken       String?
+  resetTokenExpiry DateTime?
   createdAt  DateTime    @default(now())
 }
 

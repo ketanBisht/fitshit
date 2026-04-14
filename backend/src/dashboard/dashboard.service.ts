@@ -64,13 +64,16 @@ export class DashboardService {
       }
     });
 
+    const gym = await this.prisma.gym.findUnique({ where: { id: gymId }, select: { name: true } });
+
     return { 
       totalMembers, 
       activeMembers: active, 
       expiredMembers: expired, 
       expiringSoon, 
       totalRevenue,
-      revenueTrend: Array.from(revenueMap.entries()).map(([name, revenue]) => ({ name, revenue })).reverse(), // Simplistic sort assuming chronological DB output
+      gymName: gym?.name || 'FitShit',
+      revenueTrend: Array.from(revenueMap.entries()).map(([name, revenue]) => ({ name, revenue })).reverse(), 
       genderDistribution: Array.from(genderMap.entries()).map(([name, count]) => ({ name, count })),
       planDistribution: Array.from(planMap.entries()).map(([name, count]) => ({ name, count }))
     };

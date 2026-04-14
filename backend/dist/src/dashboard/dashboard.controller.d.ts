@@ -8,6 +8,7 @@ export declare class DashboardController {
         expiredMembers: number;
         expiringSoon: number;
         totalRevenue: number;
+        gymName: string;
         revenueTrend: {
             name: string;
             revenue: number;

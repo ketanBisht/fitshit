@@ -108,6 +108,7 @@ export class MailService {
     if (!transporter) return;
 
     const subject = `Payment Confirmed - ${gymName}`;
+    const safeAmount = typeof amount === 'number' ? amount.toFixed(2) : '0.00';
     const html = `
       <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border-radius: 16px; background-color: #ffffff; color: #1a1a1a; border: 1px solid #f0f0f0;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -117,13 +118,13 @@ export class MailService {
           <h1 style="font-size: 24px; font-weight: 700; color: #000; margin: 0;">Payment Successful</h1>
         </div>
 
-        <p style="font-size: 16px; color: #4b5563;">Hi ${name},</p>
+        <p style="font-size: 16px; color: #4b5563;">Hi ${name || 'there'},</p>
         <p style="font-size: 16px; color: #4b5563;">Thank you for your payment. Your membership for <strong>${planName}</strong> is now active.</p>
         
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; margin: 32px 0;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
             <span style="color: #64748b;">Amount Paid:</span>
-            <span style="font-weight: 700; color: #1e293b;">$${amount.toFixed(2)}</span>
+            <span style="font-weight: 700; color: #1e293b;">$${safeAmount}</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #64748b;">Plan:</span>
@@ -132,7 +133,7 @@ export class MailService {
         </div>
 
         <p style="font-size: 14px; color: #94a3b8; text-align: center; margin-top: 40px;">
-          Thanks for being a part of ${gymName}!
+          Thanks for being a part of ${gymName || 'the community'}!
         </p>
       </div>
     `;
@@ -189,6 +190,51 @@ export class MailService {
       }
     } catch (error) {
       this.logger.error(`Failed to send announcement emails for ${gymName}:`, error);
+    }
+  }
+  async sendPasswordResetEmail(to: string, name: string | null, token: string, gymName: string | null, subdomain: string) {
+    const transporter = await this.getTransporter();
+    if (!transporter) return;
+
+    // In a real app, this would be a full URL like https://subdomain.fitshit.com/reset-password?token=XYZ
+    // For now, we'll provide the link format
+    const resetLink = `http://${subdomain ? subdomain + '.' : ''}localhost:3000/reset-password?token=${token}`;
+    
+    const subject = `Password Reset Request - ${gymName || 'FitShit'}`;
+    const html = `
+      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border-radius: 16px; background-color: #ffffff; color: #1a1a1a; border: 1px solid #f0f0f0;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="font-size: 24px; font-weight: 700; color: #000; margin: 0;">Password Reset</h1>
+        </div>
+
+        <p style="font-size: 16px; color: #4b5563;">Hi ${name || 'there'},</p>
+        <p style="font-size: 16px; color: #4b5563;">We received a request to reset your password for your account at <strong>${gymName || 'FitShit'}</strong>.</p>
+        
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${resetLink}" style="background-color: #000; color: #fff; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 600; display: inline-block;">Reset Password</a>
+        </div>
+
+        <p style="font-size: 14px; color: #94a3b8; line-height: 1.6;">
+          If you didn't request this, you can safely ignore this email. This link will expire in 1 hour.
+        </p>
+        
+        <p style="font-size: 12px; color: #cbd5e1; margin-top: 24px;">
+          Trouble clicking the button? Copy and paste this URL into your browser:<br>
+          <a href="${resetLink}" style="color: #3b82f6;">${resetLink}</a>
+        </p>
+      </div>
+    `;
+
+    try {
+      await transporter.sendMail({
+        from: `"${gymName || 'FitShit'} Security" <${process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@fitshit.com'}>`,
+        to: to,
+        subject: subject,
+        html: html,
+      });
+      this.logger.log(`Password reset link sent to: ${to}`);
+    } catch (error) {
+      this.logger.error(`Error sending password reset to ${to}:`, error);
     }
   }
 }

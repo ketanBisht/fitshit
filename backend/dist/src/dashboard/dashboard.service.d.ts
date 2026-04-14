@@ -8,6 +8,7 @@ export declare class DashboardService {
         expiredMembers: number;
         expiringSoon: number;
         totalRevenue: number;
+        gymName: string;
         revenueTrend: {
             name: string;
             revenue: number;

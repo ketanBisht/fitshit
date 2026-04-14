@@ -16,4 +16,10 @@ export declare class AuthService {
         access_token: string;
         role: string;
     }>;
+    forgotPassword(data: any): Promise<{
+        message: string;
+    }>;
+    resetPassword(data: any): Promise<{
+        message: string;
+    }>;
 }

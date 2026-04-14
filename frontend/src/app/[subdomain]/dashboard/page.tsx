@@ -1,13 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
+// Last Sync: 2026-04-14 19:55
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
-import { useRouter } from 'next/navigation';
-import { Zap } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
+import { Zap, User } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function MemberDashboard() {
   const router = useRouter();
+  const { subdomain } = useParams();
   const [stats, setStats] = useState<any>(null);
   useEffect(() => { fetchApi('/dashboard/member').then(setStats).catch(() => router.push('/login')); }, [router]);
 
@@ -23,10 +25,15 @@ export default function MemberDashboard() {
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Zap size={15} color="#0C0C0C" fill="#0C0C0C" />
           </div>
-          <a href="/" style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.05rem', letterSpacing: '-0.03em', color: 'var(--text)', textDecoration: 'none' }}>fitshit</a>
+          <a href="/" style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.05rem', letterSpacing: '-0.03em', color: 'var(--text)', textDecoration: 'none' }}>
+            {stats.gym?.name || 'fitshit'}
+          </a>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <ThemeToggle />
+          <button className="btn btn-ink" onClick={() => router.push('/profile')} style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }}>
+            <User size={14} style={{ marginRight: '4px' }} /> Profile
+          </button>
           <button className="btn btn-outline" onClick={() => { localStorage.removeItem('token'); router.push('/login'); }} style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }}>Sign Out</button>
         </div>
       </motion.nav>

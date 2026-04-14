@@ -93,34 +93,63 @@ export default function AddMemberPage() {
   const handleCSVSubmit = async () => {
     if (!csvFile) return;
     setLoading(true); setError('');
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
         const text = e.target?.result as string;
-        const rows = text.split('\n').filter(r => r.trim());
-        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+        const rows = text.split('\n').map(r => r.trim()).filter(Boolean);
+        if (rows.length === 0) throw new Error("The file is empty.");
+
+        // Smart Header Detection
+        const firstRow = rows[0].toLowerCase();
+        const hasHeaders = firstRow.includes('email') || firstRow.includes('name');
         
-        const members = rows.slice(1).map(row => {
+        const dataRows = hasHeaders ? rows.slice(1) : rows;
+        const headers = hasHeaders ? rows[0].split(',').map(h => h.trim().toLowerCase()) : [];
+
+        const members = dataRows.map((row, index) => {
           const cols = row.split(',').map(c => c.trim());
           const obj: any = {};
-          headers.forEach((h, i) => obj[h] = cols[i]);
           
-          // Must match backend expectations
+          if (hasHeaders) {
+            headers.forEach((h, i) => obj[h] = cols[i]);
+          } else {
+            // Fallback to fixed order if no headers detected
+            // Format: email, name, phone, gender, password, plan
+            obj.email = cols[0];
+            obj.name = cols[1];
+            obj.phone = cols[2];
+            obj.gender = cols[3];
+            obj.password = cols[5] || cols[4] || 'welcome123'; // Flexible for extra empty column seen in user image
+            obj.plan = cols[6] || cols[4] || cols[5]; // Try to find the plan/price info
+          }
+          
           return {
             email: obj.email,
             name: obj.name,
             phone: obj.phone,
             gender: obj.gender,
             password: obj.password || 'welcome123',
-            planId: plans.find(p => p.name.toLowerCase() === obj.plan?.toLowerCase())?.id || selectedPlanId
+            planId: plans.find(p => 
+              p.name.toLowerCase() === obj.plan?.toLowerCase() || 
+              p.price.toString() === obj.plan?.toString()
+            )?.id || selectedPlanId
           };
         });
 
-        await fetchApi('/users/bulk', { method: 'POST', body: JSON.stringify(members) });
-        setSuccess(true); setTimeout(() => router.push('/admin'), 1500);
-      };
-      reader.readAsText(csvFile);
-    } catch (err: any) { setError(err.message); setLoading(false); }
+        if (members.length === 0) throw new Error("No members found in CSV.");
+
+        const res = await fetchApi('/users/bulk', { method: 'POST', body: JSON.stringify(members) });
+        toast.success(res.message);
+        setSuccess(true); 
+        setTimeout(() => router.push('/admin'), 1500);
+      } catch (err: any) { 
+        setError(err.message); 
+        setLoading(false); 
+      }
+    };
+    reader.readAsText(csvFile);
   };
 
   if (loadingConfig) return <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" /></div>;

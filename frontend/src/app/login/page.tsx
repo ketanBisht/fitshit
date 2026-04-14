@@ -80,6 +80,9 @@ export default function LoginPage() {
             <div>
               <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Password</label>
               <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="input" placeholder="••••••••" />
+              <div style={{ marginTop: '0.5rem', textAlign: 'right' }}>
+                <a href="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--text3)', textDecoration: 'none' }}>Forgot Password?</a>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '0.875rem', marginTop: '0.5rem' }}>
               <motion.button type="submit" disabled={loading} className="btn btn-ink" whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.02 }}>

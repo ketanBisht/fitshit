@@ -124,4 +124,60 @@ export class AuthService {
       role: user.role,
     };
   }
+
+  async forgotPassword(data: any) {
+    const { email, subdomain } = data;
+    const user = await this.prisma.user.findUnique({ 
+      where: { email },
+      include: { gym: true }
+    });
+
+    if (!user || (subdomain && user.gym?.subdomain !== subdomain)) {
+      // Return success even if user not found to prevent email enumeration
+      return { message: 'If an account with that email exists, a reset link has been sent.' };
+    }
+
+    const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const expiry = new Date();
+    expiry.setHours(expiry.getHours() + 1);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: token,
+        resetTokenExpiry: expiry,
+      },
+    });
+
+    await this.mailService.sendPasswordResetEmail(user.email, user.name, token, user.gym?.name || 'FitShit', subdomain || '');
+
+    return { message: 'If an account with that email exists, a reset link has been sent.' };
+  }
+
+  async resetPassword(data: any) {
+    const { token, newPassword } = data;
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+
+    return { message: 'Password has been reset successfully' };
+  }
 }

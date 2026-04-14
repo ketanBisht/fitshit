@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { Users, UserPlus, LogOut, Globe, BarChart2, Zap, ArrowUpRight, Tag, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, UserPlus, LogOut, Globe, BarChart2, Zap, ArrowUpRight, Tag, Trash2, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import toast from 'react-hot-toast';
 
@@ -59,7 +59,9 @@ export default function AdminDashboard() {
             <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={13} color="#0C0C0C" fill="#0C0C0C" />
             </div>
-            <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '0.95rem', letterSpacing: '-0.03em', color: 'var(--text)' }}>fitshit</span>
+            <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '0.95rem', letterSpacing: '-0.03em', color: 'var(--text)' }}>
+              {stats.gymName || 'fitshit'}
+            </span>
           </div>
           <p className="label" style={{ paddingLeft: '0.25rem' }}>Admin</p>
         </div>
@@ -70,6 +72,7 @@ export default function AdminDashboard() {
           <button className="nav-item" onClick={() => router.push('/admin/plans')}><Tag size={15} /> Plans & Pricing</button>
           <button className="nav-item" onClick={() => router.push('/admin/announcements')}><Zap size={15} /> Announcements</button>
           <button className="nav-item" onClick={() => router.push('/admin/website')}><Globe size={15} /> Website</button>
+          <button className="nav-item" onClick={() => router.push('/admin/profile')}><User size={15} /> Profile Settings</button>
         </nav>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <ThemeToggle />
@@ -165,7 +168,10 @@ export default function AdminDashboard() {
                         <td style={{ padding: '1rem 1.5rem', color: 'var(--text3)' }}>
                           {m.membership ? new Date(m.membership.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                         </td>
-                        <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                        <td style={{ padding: '1rem 1.5rem', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => router.push(`/admin/members/${m.id}`)} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer' }} title="Edit user">
+                            <ArrowUpRight size={16} />
+                          </button>
                           <button onClick={() => handleDeleteMember(m.id, m.email)} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer' }} title="Delete user">
                             <Trash2 size={16} />
                           </button>

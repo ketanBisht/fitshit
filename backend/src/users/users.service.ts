@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
@@ -60,25 +60,42 @@ export class UsersService {
 
   async createMembersBulk(members: any[], adminGymId: string) {
     let count = 0;
+    let errors = 0;
+
     for (const member of members) {
-      // Basic check to see if email exists already
-      const exists = await this.prisma.user.findUnique({ where: { email: member.email } });
-      if (!exists) {
-        await this.createMember({
-          email: member.email,
-          phone: member.phone || null,
-          gender: member.gender || null,
-          password: member.password || 'welcome123',
-          membership: member.planId ? {
-            planId: member.planId,
-            startDate: member.startDate || new Date().toISOString(),
-            endDate: member.endDate || new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
-          } : undefined
-        }, adminGymId);
-        count++;
+      try {
+        if (!member.email) {
+          errors++;
+          continue;
+        }
+
+        // Basic check to see if email exists already
+        const exists = await this.prisma.user.findUnique({ where: { email: member.email } });
+        if (!exists) {
+          await this.createMember({
+            name: member.name || null,
+            email: member.email,
+            phone: member.phone || null,
+            gender: member.gender || null,
+            password: member.password || 'welcome123',
+            membership: member.planId ? {
+              planId: member.planId,
+              startDate: member.startDate || new Date().toISOString(),
+              endDate: member.endDate || new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
+            } : undefined
+          }, adminGymId);
+          count++;
+        }
+      } catch (err) {
+        console.error(`Failed to import member ${member.email}:`, err);
+        errors++;
       }
     }
-    return { message: `Successfully created ${count} members` };
+    return { 
+      message: `Successfully created ${count} members. ${errors > 0 ? `Skipped ${errors} invalid/existing rows.` : ''}`,
+      total: count,
+      skipped: errors
+    };
   }
 
   async getMembers(gymId: string) {
@@ -102,6 +119,67 @@ export class UsersService {
     
     return this.prisma.user.delete({
       where: { id: memberId }
+    });
+  }
+
+  async getProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { 
+        gym: true,
+        membership: {
+          include: { plan: true }
+        }
+      }
+    });
+  }
+
+  async updateProfile(userId: string, data: any) {
+    const { name, phone, gender } = data;
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: name || undefined,
+        phone: phone || undefined,
+        gender: gender || undefined,
+      }
+    });
+  }
+
+  async getMemberAdmin(adminGymId: string, memberId: string) {
+    return this.prisma.user.findFirst({
+      where: { id: memberId, gymId: adminGymId },
+      include: { 
+        membership: { include: { plan: true } }
+      }
+    });
+  }
+
+  async updateMemberAdmin(adminGymId: string, memberId: string, data: any) {
+    const { name, phone, gender } = data;
+    return this.prisma.user.update({
+      where: { id: memberId, gymId: adminGymId },
+      data: {
+        name: name || undefined,
+        phone: phone || undefined,
+        gender: gender || undefined,
+      }
+    });
+  }
+
+  async changePassword(userId: string, data: any) {
+    const { oldPassword, newPassword } = data;
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    
+    if (!user) throw new UnauthorizedException('User not found');
+    
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) throw new UnauthorizedException('Invalid old password');
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
     });
   }
 }
