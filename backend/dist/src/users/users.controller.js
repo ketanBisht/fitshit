@@ -32,6 +32,9 @@ let UsersController = class UsersController {
     async getMembers(req) {
         return this.usersService.getMembers(req.user.gymId);
     }
+    async deleteMember(id, req) {
+        return this.usersService.deleteMember(req.user.gymId, id);
+    }
 };
 exports.UsersController = UsersController;
 __decorate([
@@ -60,6 +63,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getMembers", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "deleteMember", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

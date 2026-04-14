@@ -19,7 +19,15 @@ let DashboardService = class DashboardService {
     }
     async getAdminStats(gymId) {
         const totalMembers = await this.prisma.user.count({ where: { gymId, role: 'MEMBER' } });
+        const usersDemographics = await this.prisma.user.findMany({
+            where: { gymId, role: 'MEMBER' },
+            select: { gender: true }
+        });
         const memberships = await this.prisma.membership.findMany({
+            where: { user: { gymId, role: 'MEMBER' } },
+            include: { plan: true }
+        });
+        const payments = await this.prisma.payment.findMany({
             where: { user: { gymId, role: 'MEMBER' } }
         });
         const now = new Date();
@@ -28,6 +36,7 @@ let DashboardService = class DashboardService {
         let active = 0;
         let expired = 0;
         let expiringSoon = 0;
+        let totalRevenue = 0;
         memberships.forEach((m) => {
             if (m.endDate < now) {
                 expired++;
@@ -39,7 +48,33 @@ let DashboardService = class DashboardService {
                 }
             }
         });
-        return { totalMembers, activeMembers: active, expiredMembers: expired, expiringSoon };
+        const revenueMap = new Map();
+        payments.forEach((p) => {
+            totalRevenue += p.amount;
+            const monthYear = p.date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+            revenueMap.set(monthYear, (revenueMap.get(monthYear) || 0) + p.amount);
+        });
+        const genderMap = new Map();
+        usersDemographics.forEach((u) => {
+            const gender = u.gender || 'Other';
+            genderMap.set(gender, (genderMap.get(gender) || 0) + 1);
+        });
+        const planMap = new Map();
+        memberships.forEach((m) => {
+            if (m.plan && m.plan.name) {
+                planMap.set(m.plan.name, (planMap.get(m.plan.name) || 0) + 1);
+            }
+        });
+        return {
+            totalMembers,
+            activeMembers: active,
+            expiredMembers: expired,
+            expiringSoon,
+            totalRevenue,
+            revenueTrend: Array.from(revenueMap.entries()).map(([name, revenue]) => ({ name, revenue })).reverse(),
+            genderDistribution: Array.from(genderMap.entries()).map(([name, count]) => ({ name, count })),
+            planDistribution: Array.from(planMap.entries()).map(([name, count]) => ({ name, count }))
+        };
     }
     async getMemberStats(userId) {
         const user = await this.prisma.user.findUnique({

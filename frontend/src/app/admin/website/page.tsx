@@ -5,6 +5,7 @@ import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Zap } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import toast from 'react-hot-toast';
 
 export default function WebsiteSettings() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function WebsiteSettings() {
     try {
       await fetchApi('/gyms/me', { method: 'PATCH', body: JSON.stringify({ name: gymData.name, description: gymData.description, facilities: gymData.facilities, announcement: gymData.announcement, instagram: gymData.instagram, timing: gymData.timing }) });
       setSaved(true); setTimeout(() => setSaved(false), 3000);
-    } catch (e: any) { alert(e.message); } finally { setSaving(false); }
+    } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
   if (loading) return <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" /></div>;
@@ -109,8 +110,10 @@ export default function WebsiteSettings() {
                 </div>
               </div>
               <div>
-                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Opening Hours</label>
-                <input type="text" value={gymData.timing} onChange={e => setGymData({ ...gymData, timing: e.target.value })} placeholder="Mon-Sat: 6AM - 10PM" className="input" />
+                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>
+                  Opening Hours <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--text3)', letterSpacing: 0 }}>(comma separated)</span>
+                </label>
+                <textarea rows={2} value={gymData.timing} onChange={e => setGymData({ ...gymData, timing: e.target.value })} placeholder="Mon-Sat: 6AM-10PM, Sun: 8AM-8PM" className="input" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.875rem', marginTop: '0.25rem' }}>

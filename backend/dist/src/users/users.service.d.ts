@@ -1,7 +1,9 @@
 import { PrismaService } from '../prisma.service';
+import { MailService } from '../mail/mail.service';
 export declare class UsersService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private mailService;
+    constructor(prisma: PrismaService, mailService: MailService);
     createMember(data: any, adminGymId: string): Promise<{
         message: string;
         id: string;
@@ -12,10 +14,10 @@ export declare class UsersService {
     getMembers(gymId: string): Promise<({
         membership: ({
             plan: {
+                name: string;
                 id: string;
                 gymId: string;
                 createdAt: Date;
-                name: string;
                 price: number;
                 durationMonths: number;
                 features: string;
@@ -31,12 +33,25 @@ export declare class UsersService {
             planId: string | null;
         }) | null;
     } & {
+        name: string | null;
         id: string;
         email: string;
         password: string;
         phone: string | null;
+        gender: string | null;
         role: string;
         gymId: string | null;
         createdAt: Date;
     })[]>;
+    deleteMember(gymId: string, memberId: string): Promise<{
+        name: string | null;
+        id: string;
+        email: string;
+        password: string;
+        phone: string | null;
+        gender: string | null;
+        role: string;
+        gymId: string | null;
+        createdAt: Date;
+    }>;
 }

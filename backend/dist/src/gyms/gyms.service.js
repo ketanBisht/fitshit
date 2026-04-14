@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GymsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
+const mail_service_1 = require("../mail/mail.service");
 let GymsService = class GymsService {
     prisma;
-    constructor(prisma) {
+    mailService;
+    constructor(prisma, mailService) {
         this.prisma = prisma;
+        this.mailService = mailService;
     }
     async getGymBySubdomain(subdomain) {
         const gym = await this.prisma.gym.findUnique({
@@ -52,15 +55,25 @@ let GymsService = class GymsService {
         const announcement = await this.prisma.announcement.create({
             data: { gymId, content }
         });
-        const members = await this.prisma.user.findMany({ where: { gymId, role: 'MEMBER' } });
+        const now = new Date();
+        const members = await this.prisma.user.findMany({
+            where: {
+                gymId,
+                role: 'MEMBER',
+                membership: {
+                    status: 'ACTIVE',
+                    endDate: { gte: now }
+                }
+            }
+        });
         const gym = await this.prisma.gym.findUnique({ where: { id: gymId } });
-        console.log(`\n================= EMAIL DISPATCH =================`);
-        console.log(`[Gym]: ${gym?.name}`);
-        console.log(`[Subject]: New Announcement from ${gym?.name}`);
-        console.log(`[Content]: "${content}"`);
-        console.log(`[Recipients]: ${members.length} members`);
-        members.forEach(m => console.log(` - Sent to: ${m.email} / ${m.phone || 'no phone'}`));
-        console.log(`==================================================\n`);
+        if (gym && members.length > 0) {
+            console.log(`[Announcements] Found ${members.length} active members for ${gym.name}. Dispatching emails...`);
+            await this.mailService.sendAnnouncementEmails(gym.name, content, members.map(m => m.email));
+        }
+        else {
+            console.log(`[Announcements] No active members found for ${gym?.name || gymId}. Emails will not be sent.`);
+        }
         return announcement;
     }
     async deleteAnnouncement(gymId, announcementId) {
@@ -102,6 +115,7 @@ let GymsService = class GymsService {
 exports.GymsService = GymsService;
 exports.GymsService = GymsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        mail_service_1.MailService])
 ], GymsService);
 //# sourceMappingURL=gyms.service.js.map

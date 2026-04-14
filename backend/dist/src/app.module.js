@@ -15,12 +15,20 @@ const users_module_1 = require("./users/users.module");
 const gyms_module_1 = require("./gyms/gyms.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const prisma_module_1 = require("./prisma.module");
+const mail_module_1 = require("./mail/mail.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, users_module_1.UsersModule, gyms_module_1.GymsModule, dashboard_module_1.DashboardModule],
+        imports: [
+            prisma_module_1.PrismaModule,
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
+            gyms_module_1.GymsModule,
+            dashboard_module_1.DashboardModule,
+            mail_module_1.MailModule,
+        ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })

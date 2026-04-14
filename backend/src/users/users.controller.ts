@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Delete, Param, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -25,5 +25,11 @@ export class UsersController {
   @Get()
   async getMembers(@Request() req: any) {
     return this.usersService.getMembers(req.user.gymId);
+  }
+
+  @Roles('ADMIN')
+  @Delete(':id')
+  async deleteMember(@Param('id') id: string, @Request() req: any) {
+    return this.usersService.deleteMember(req.user.gymId, id);
   }
 }

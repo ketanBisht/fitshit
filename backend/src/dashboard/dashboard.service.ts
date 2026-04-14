@@ -8,7 +8,18 @@ export class DashboardService {
   async getAdminStats(gymId: string) {
     const totalMembers = await this.prisma.user.count({ where: { gymId, role: 'MEMBER' } });
     
+    // Fetch users for demographics
+    const usersDemographics = await this.prisma.user.findMany({
+      where: { gymId, role: 'MEMBER' },
+      select: { gender: true }
+    });
+
     const memberships = await this.prisma.membership.findMany({
+      where: { user: { gymId, role: 'MEMBER' } },
+      include: { plan: true }
+    });
+
+    const payments = await this.prisma.payment.findMany({
       where: { user: { gymId, role: 'MEMBER' } }
     });
 
@@ -19,6 +30,7 @@ export class DashboardService {
     let active = 0;
     let expired = 0;
     let expiringSoon = 0;
+    let totalRevenue = 0;
 
     memberships.forEach((m: any) => {
       if (m.endDate < now) {
@@ -31,7 +43,37 @@ export class DashboardService {
       }
     });
 
-    return { totalMembers, activeMembers: active, expiredMembers: expired, expiringSoon };
+    // Analytics processing
+    const revenueMap = new Map<string, number>();
+    payments.forEach((p: any) => {
+      totalRevenue += p.amount;
+      const monthYear = p.date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+      revenueMap.set(monthYear, (revenueMap.get(monthYear) || 0) + p.amount);
+    });
+
+    const genderMap = new Map<string, number>();
+    usersDemographics.forEach((u: any) => {
+      const gender = u.gender || 'Other';
+      genderMap.set(gender, (genderMap.get(gender) || 0) + 1);
+    });
+
+    const planMap = new Map<string, number>();
+    memberships.forEach((m: any) => {
+      if (m.plan && m.plan.name) {
+        planMap.set(m.plan.name, (planMap.get(m.plan.name) || 0) + 1);
+      }
+    });
+
+    return { 
+      totalMembers, 
+      activeMembers: active, 
+      expiredMembers: expired, 
+      expiringSoon, 
+      totalRevenue,
+      revenueTrend: Array.from(revenueMap.entries()).map(([name, revenue]) => ({ name, revenue })).reverse(), // Simplistic sort assuming chronological DB output
+      genderDistribution: Array.from(genderMap.entries()).map(([name, count]) => ({ name, count })),
+      planDistribution: Array.from(planMap.entries()).map(([name, count]) => ({ name, count }))
+    };
   }
 
   async getMemberStats(userId: string) {

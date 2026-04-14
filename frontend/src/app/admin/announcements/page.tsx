@@ -5,6 +5,7 @@ import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Zap, Megaphone, Trash2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import toast from 'react-hot-toast';
 
 export default function AnnouncementsPage() {
   const router = useRouter();
@@ -28,16 +29,30 @@ export default function AnnouncementsPage() {
     try {
       await fetchApi('/gyms/me/announcements', { method: 'POST', body: JSON.stringify({ content }) });
       setContent('');
+      toast.success('Announcement posted');
       loadAnnouncements();
-    } catch (err: any) { alert(err.message); } finally { setSubmitting(false); }
+    } catch (err: any) { toast.error(err.message); } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this announcement?')) return;
-    try {
-      await fetchApi(`/gyms/me/announcements/${id}`, { method: 'DELETE' });
-      loadAnnouncements();
-    } catch (err: any) { alert(err.message); }
+    toast.custom((t) => (
+      <div style={{ background: 'var(--bg-card)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
+        <p style={{ fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text)' }}>Delete this announcement?</p>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', flex: 1 }} onClick={() => toast.dismiss(t.id)}>Cancel</button>
+          <button className="btn" style={{ background: '#e11d48', color: '#fff', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem', flex: 1, borderRadius: '99px' }} onClick={async () => {
+            toast.dismiss(t.id);
+            try {
+              await fetchApi(`/gyms/me/announcements/${id}`, { method: 'DELETE' });
+              loadAnnouncements();
+              toast.success('Announcement deleted');
+            } catch (err: any) {
+              toast.error(err.message);
+            }
+          }}>Delete</button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   if (loading) return <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" /></div>;

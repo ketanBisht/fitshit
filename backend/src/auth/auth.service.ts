@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
   async registerAdmin(data: any) {
@@ -40,6 +42,8 @@ export class AuthService {
       },
     });
 
+    await this.mailService.sendWelcomeEmail(user.email, null, 'ADMIN', undefined, gym.name);
+
     return { message: 'Admin and Gym registered successfully' };
   }
 
@@ -56,13 +60,27 @@ export class AuthService {
       data: {
         email: data.email,
         password: hashedPassword,
+        name: data.name || null,
+        phone: data.phone || null,
+        gender: data.gender || null,
         role: 'MEMBER',
         gymId: gym.id,
       },
     });
 
-    // Mock purchase: Create Membership based on plan length
-    const months = parseInt(data.planMonths || '1');
+    let months = 1;
+    let planId = null;
+
+    if (data.planId) {
+      const plan = await this.prisma.plan.findUnique({ where: { id: data.planId } });
+      if (plan && plan.gymId === gym.id) {
+        months = plan.durationMonths;
+        planId = plan.id;
+      }
+    } else if (data.planMonths) {
+      months = parseInt(data.planMonths || '1');
+    }
+
     const startDate = new Date();
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + months);
@@ -70,11 +88,14 @@ export class AuthService {
     await this.prisma.membership.create({
       data: {
         userId: user.id,
+        planId,
         startDate,
         endDate,
         status: 'ACTIVE',
       }
     });
+
+    await this.mailService.sendWelcomeEmail(user.email, user.name, 'MEMBER', undefined, gym.name);
 
     return { message: 'Member registered successfully' };
   }

@@ -1,10 +1,12 @@
 import { PrismaService } from '../prisma.service';
+import { MailService } from '../mail/mail.service';
 export declare class GymsService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private mailService;
+    constructor(prisma: PrismaService, mailService: MailService);
     getGymBySubdomain(subdomain: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         subdomain: string;
         description: string | null;
         facilities: string | null;
@@ -13,9 +15,9 @@ export declare class GymsService {
         address: string | null;
     }>;
     getGymInfo(gymId: string): Promise<{
+        name: string;
         id: string;
         createdAt: Date;
-        name: string;
         subdomain: string;
         description: string | null;
         facilities: string | null;
@@ -32,9 +34,9 @@ export declare class GymsService {
         timing?: string;
         address?: string;
     }): Promise<{
+        name: string;
         id: string;
         createdAt: Date;
-        name: string;
         subdomain: string;
         description: string | null;
         facilities: string | null;
@@ -62,19 +64,19 @@ export declare class GymsService {
         content: string;
     }>;
     getPlans(gymId: string): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;
     }[]>;
     getPlansBySubdomain(subdomain: string): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;
@@ -85,19 +87,19 @@ export declare class GymsService {
         durationMonths: number;
         features: string;
     }): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;
     }>;
     deletePlan(gymId: string, planId: string): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;

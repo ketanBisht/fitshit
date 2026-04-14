@@ -5,6 +5,7 @@ import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { ArrowUpRight, Zap, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import toast from 'react-hot-toast';
 
 export default function AddMemberPage() {
   const router = useRouter();
@@ -16,8 +17,10 @@ export default function AddMemberPage() {
 
   // Manual State
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   
   // CSV State
@@ -46,9 +49,11 @@ export default function AddMemberPage() {
       await fetchApi('/users', { 
         method: 'POST', 
         body: JSON.stringify({ 
-          email, 
+          email,
+          name, 
           password, 
           phone, 
+          gender: gender || null,
           membership: { planId: selectedPlanId, startDate: new Date().toISOString(), endDate: new Date(new Date().setMonth(new Date().getMonth() + (plans.find(p => p.id === selectedPlanId)?.durationMonths || 1))).toISOString() } 
         }) 
       });
@@ -81,7 +86,7 @@ export default function AddMemberPage() {
       setCsvFile(file);
       processCSV(file);
     } else {
-      alert("Please upload a valid CSV file");
+      toast.error("Please upload a valid CSV file");
     }
   };
 
@@ -103,7 +108,9 @@ export default function AddMemberPage() {
           // Must match backend expectations
           return {
             email: obj.email,
+            name: obj.name,
             phone: obj.phone,
+            gender: obj.gender,
             password: obj.password || 'welcome123',
             planId: plans.find(p => p.name.toLowerCase() === obj.plan?.toLowerCase())?.id || selectedPlanId
           };
@@ -175,17 +182,32 @@ export default function AddMemberPage() {
             <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
+                  <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Member Name</label>
+                  <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input" placeholder="John Doe" />
+                </div>
+                <div>
                   <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Member Email</label>
                   <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="member@gym.com" />
                 </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Phone</label>
                   <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="input" placeholder="555-0199" />
                 </div>
-              </div>
-              <div>
-                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Temp Password</label>
-                <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="input" placeholder="••••••••" />
+                <div>
+                  <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Gender</label>
+                  <select className="input" value={gender} onChange={e => setGender(e.target.value)}>
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Temp Password</label>
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="input" placeholder="••••••••" />
+                </div>
               </div>
               <div style={{ padding: '0.875rem 1.125rem', background: 'var(--accent-s)', border: '1.5px solid var(--accent)', borderRadius: '14px' }}>
                 <p className="label" style={{ marginBottom: '0.5rem' }}>Select Membership Plan</p>
@@ -213,7 +235,7 @@ export default function AddMemberPage() {
                 >
                   <Upload size={32} color="var(--text3)" style={{ margin: '0 auto 1rem' }} />
                   <p style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.5rem' }}>Drop CSV here or click to browse</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text3)' }}>Format: email, phone, password, plan</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text3)' }}>Format: email, name, phone, gender, password, plan</p>
                   <input type="file" accept=".csv" onChange={handleFileDrop} style={{ display: 'none' }} ref={fileInputRef} />
                 </div>
               ) : (

@@ -45,11 +45,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
+const mail_service_1 = require("../mail/mail.service");
 const bcrypt = __importStar(require("bcrypt"));
 let UsersService = class UsersService {
     prisma;
-    constructor(prisma) {
+    mailService;
+    constructor(prisma, mailService) {
         this.prisma = prisma;
+        this.mailService = mailService;
     }
     async createMember(data, adminGymId) {
         const hashedPassword = await bcrypt.hash(data.password || 'password123', 10);
@@ -57,7 +60,9 @@ let UsersService = class UsersService {
             data: {
                 email: data.email,
                 password: hashedPassword,
-                phone: data.phone,
+                name: data.name || null,
+                phone: data.phone || null,
+                gender: data.gender || null,
                 role: 'MEMBER',
                 gymId: adminGymId,
             },
@@ -72,7 +77,24 @@ let UsersService = class UsersService {
                     status: 'ACTIVE',
                 },
             });
+            if (data.membership.planId) {
+                const plan = await this.prisma.plan.findUnique({ where: { id: data.membership.planId } });
+                if (plan) {
+                    await this.prisma.payment.create({
+                        data: {
+                            userId: user.id,
+                            amount: plan.price
+                        }
+                    });
+                    const gym = await this.prisma.gym.findUnique({ where: { id: adminGymId } });
+                    if (gym) {
+                        await this.mailService.sendPaymentReceiptEmail(user.email, user.name, plan.price, plan.name, gym.name);
+                    }
+                }
+            }
         }
+        const gym = await this.prisma.gym.findUnique({ where: { id: adminGymId } });
+        await this.mailService.sendWelcomeEmail(user.email, user.name, 'MEMBER', data.password || 'password123', gym?.name);
         return { message: 'Member created successfully', id: user.id };
     }
     async createMembersBulk(members, adminGymId) {
@@ -82,7 +104,8 @@ let UsersService = class UsersService {
             if (!exists) {
                 await this.createMember({
                     email: member.email,
-                    phone: member.phone,
+                    phone: member.phone || null,
+                    gender: member.gender || null,
                     password: member.password || 'welcome123',
                     membership: member.planId ? {
                         planId: member.planId,
@@ -105,10 +128,21 @@ let UsersService = class UsersService {
             },
         });
     }
+    async deleteMember(gymId, memberId) {
+        const member = await this.prisma.user.findFirst({
+            where: { id: memberId, gymId }
+        });
+        if (!member)
+            throw new Error('Member not found');
+        return this.prisma.user.delete({
+            where: { id: memberId }
+        });
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        mail_service_1.MailService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

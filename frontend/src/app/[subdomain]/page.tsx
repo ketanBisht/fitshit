@@ -82,11 +82,11 @@ export default function GymLandingPage() {
             {gymData.description || 'Join our community and achieve your fitness goals with world-class equipment and expert coaches.'}
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
-            {gymData.timing && (
-              <div className="pill" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
-                🕒 {gymData.timing}
+            {gymData.timing && gymData.timing.split(/[,\\n]+/).map((t: string, i: number) => t.trim() ? (
+              <div key={i} className="pill" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+                🕒 {t.trim()}
               </div>
-            )}
+            ) : null)}
             {gymData.instagram && (
               <a href={`https://instagram.com/${gymData.instagram.replace('@', '')}`} target="_blank" className="pill" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', textDecoration: 'none', color: 'var(--text)' }}>
                 📷 @{gymData.instagram.replace('@', '')}

@@ -1,20 +1,52 @@
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { Users, UserPlus, LogOut, Globe, BarChart2, Zap, ArrowUpRight, Tag } from 'lucide-react';
+import { Users, UserPlus, LogOut, Globe, BarChart2, Zap, ArrowUpRight, Tag, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
+  const [allPlans, setAllPlans] = useState<any[]>([]);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Filters State
+  const [filterPlan, setFilterPlan] = useState('ALL');
+  const [filterGender, setFilterGender] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
 
   useEffect(() => {
     fetchApi('/dashboard/admin').then(setStats).catch(() => router.push('/login'));
     fetchApi('/users').then(setMembers).catch(console.error);
+    fetchApi('/gyms/me/plans').then(setAllPlans).catch(console.error);
   }, [router]);
+
+  const handleDeleteMember = async (id: string, email: string) => {
+    toast.custom((t) => (
+      <div style={{ background: 'var(--bg-card)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
+        <p style={{ fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text)' }}>Delete {email}?</p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text2)', marginBottom: '1rem' }}>This action cannot be undone.</p>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', flex: 1 }} onClick={() => toast.dismiss(t.id)}>Cancel</button>
+          <button className="btn" style={{ background: '#e11d48', color: '#fff', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem', flex: 1, borderRadius: '99px' }} onClick={async () => {
+            toast.dismiss(t.id);
+            try {
+              await fetchApi(`/users/${id}`, { method: 'DELETE' });
+              setMembers(members => members.filter(m => m.id !== id));
+              fetchApi('/dashboard/admin').then(setStats);
+              toast.success('Member deleted');
+            } catch (err: any) {
+              toast.error('Failed to delete member');
+            }
+          }}>Delete</button>
+        </div>
+      </div>
+    ), { duration: Infinity });
+  };
 
   if (!stats) return <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" /></div>;
 
@@ -32,7 +64,8 @@ export default function AdminDashboard() {
           <p className="label" style={{ paddingLeft: '0.25rem' }}>Admin</p>
         </div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
-          <div className="nav-item active"><BarChart2 size={15} /> Overview</div>
+          <div className="nav-item active"><Users size={15} /> Members</div>
+          <button className="nav-item" onClick={() => router.push('/admin/analytics')}><BarChart2 size={15} /> Analytics</button>
           <button className="nav-item" onClick={() => router.push('/admin/add-member')}><UserPlus size={15} /> Add Member</button>
           <button className="nav-item" onClick={() => router.push('/admin/plans')}><Tag size={15} /> Plans & Pricing</button>
           <button className="nav-item" onClick={() => router.push('/admin/announcements')}><Zap size={15} /> Announcements</button>
@@ -59,61 +92,119 @@ export default function AdminDashboard() {
           </motion.button>
         </motion.div>
 
-        {/* Stats — inline row, not 4 cards */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}
-          style={{ display: 'flex', gap: '3.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '2.5rem', marginBottom: '2.5rem' }}>
-          {[
-            { label: 'Total Members', val: stats.totalMembers, color: 'var(--text)' },
-            { label: 'Active', val: stats.activeMembers, color: 'var(--accent)' },
-            { label: 'Expiring Soon', val: stats.expiringSoon, color: 'var(--text)' },
-            { label: 'Expired', val: stats.expiredMembers, color: 'var(--text3)' },
-          ].map(s => (
-            <div key={s.label}>
-              <p className="label" style={{ marginBottom: '0.5rem' }}>{s.label}</p>
-              <p className="stat-num" style={{ fontSize: '3rem', color: s.color }}>{s.val}</p>
-            </div>
-          ))}
-        </motion.div>
-
         {/* Members table */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.5 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
             <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.25rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>
               Members <span style={{ color: 'var(--text3)', fontWeight: 500 }}>· {members.length}</span>
             </h2>
-            <motion.button className="btn btn-outline" onClick={() => router.push('/admin/add-member')}
-              style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-              <UserPlus size={14} /> Add
-            </motion.button>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <select className="input" style={{ width: 140, padding: '0.4rem 0.75rem', fontSize: '0.85rem' }} value={filterPlan} onChange={e => setFilterPlan(e.target.value)}>
+                <option value="ALL">All Plans</option>
+                {allPlans.map(p => (
+                  <option key={p.id} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+              <select className="input" style={{ width: 140, padding: '0.4rem 0.75rem', fontSize: '0.85rem' }} value={filterGender} onChange={e => setFilterGender(e.target.value)}>
+                <option value="ALL">All Genders</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+              <select className="input" style={{ width: 140, padding: '0.4rem 0.75rem', fontSize: '0.85rem' }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="EXPIRED">Expired</option>
+                <option value="NONE">No Plan</option>
+              </select>
+              <motion.button className="btn btn-outline" onClick={() => router.push('/admin/add-member')}
+                style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem', marginLeft: '1rem' }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                <UserPlus size={14} /> Add
+              </motion.button>
+            </div>
           </div>
 
           <div className="card" style={{ overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
-                  {['Email', 'Status', 'Expires'].map(h => (
+                  {['Name / Email', 'Status', 'Expires', ''].map(h => (
                     <th key={h} style={{ padding: '0.875rem 1.5rem', textAlign: 'left' }} className="label">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {members.map((m, i) => {
+                {members.filter(m => {
                   const isExpired = m.membership && new Date(m.membership.endDate) < new Date();
+                  const statusLabel = m.membership ? (isExpired ? 'EXPIRED' : 'ACTIVE') : 'NONE';
+                  if (filterStatus !== 'ALL' && statusLabel !== filterStatus) return false;
+                  if (filterGender !== 'ALL' && (m.gender || 'Other') !== filterGender) return false;
+                  if (filterPlan !== 'ALL' && m.membership?.plan?.name !== filterPlan) return false;
+                  return true;
+                }).map((m, i) => {
+                  const isExpired = m.membership && new Date(m.membership.endDate) < new Date();
+                  const isExpanded = expandedRow === m.id;
+
                   return (
-                    <motion.tr key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 + i * 0.04 }}
-                      style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text)' }}>{m.email}</td>
-                      <td style={{ padding: '1rem 1.5rem' }}>
-                        {m.membership ? <span className={isExpired ? 'badge-expired' : 'badge-active'}>{isExpired ? 'Expired' : 'Active'}</span> : <span className="badge-none">No Plan</span>}
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', color: 'var(--text3)' }}>
-                        {m.membership ? new Date(m.membership.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                      </td>
-                    </motion.tr>
+                    <React.Fragment key={m.id}>
+                      <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 + Math.min(i * 0.04, 0.5) }}
+                        style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)', cursor: 'pointer', background: isExpanded ? 'var(--bg3)' : 'transparent' }}
+                        onClick={() => setExpandedRow(isExpanded ? null : m.id)}>
+                        <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </span>
+                          <div>
+                            <div style={{ color: 'var(--text)' }}>{m.name || '—'}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text3)', fontWeight: 500 }}>{m.email}</div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '1rem 1.5rem' }}>
+                          {m.membership ? <span className={isExpired ? 'badge-expired' : 'badge-active'}>{isExpired ? 'Expired' : 'Active'}</span> : <span className="badge-none">No Plan</span>}
+                        </td>
+                        <td style={{ padding: '1rem 1.5rem', color: 'var(--text3)' }}>
+                          {m.membership ? new Date(m.membership.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </td>
+                        <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => handleDeleteMember(m.id, m.email)} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer' }} title="Delete user">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </motion.tr>
+                      {isExpanded && (
+                        <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                          <td colSpan={4} style={{ padding: '0 1.5rem 1.5rem 3.5rem' }}>
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                              style={{ overflow: 'hidden', display: 'flex', gap: '3rem' }}>
+                              <div>
+                                <p className="label" style={{ marginBottom: '0.3rem' }}>Phone</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text)', fontWeight: 500 }}>{m.phone || '—'}</p>
+                              </div>
+                              <div>
+                                <p className="label" style={{ marginBottom: '0.3rem' }}>Gender</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text)', fontWeight: 500 }}>{m.gender || '—'}</p>
+                              </div>
+                              <div>
+                                <p className="label" style={{ marginBottom: '0.3rem' }}>Current Plan</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text)', fontWeight: 500 }}>
+                                  {m.membership?.plan ? `${m.membership.plan.name} (₹${m.membership.plan.price})` : '—'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="label" style={{ marginBottom: '0.3rem' }}>Registered On</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text)', fontWeight: 500 }}>
+                                  {new Date(m.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                                </p>
+                              </div>
+                            </motion.div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
                 {members.length === 0 && (
-                  <tr><td colSpan={3} style={{ padding: '4rem', textAlign: 'center', color: 'var(--text3)' }}>
+                  <tr><td colSpan={4} style={{ padding: '4rem', textAlign: 'center', color: 'var(--text3)' }}>
                     No members yet — <a href="/admin/add-member" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>add your first one.</a>
                   </td></tr>
                 )}

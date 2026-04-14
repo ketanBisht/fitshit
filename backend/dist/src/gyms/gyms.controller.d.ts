@@ -3,8 +3,8 @@ export declare class GymsController {
     private readonly gymsService;
     constructor(gymsService: GymsService);
     getGymBySubdomain(subdomain: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         subdomain: string;
         description: string | null;
         facilities: string | null;
@@ -13,9 +13,9 @@ export declare class GymsController {
         address: string | null;
     }>;
     getMyGymInfo(req: any): Promise<{
+        name: string;
         id: string;
         createdAt: Date;
-        name: string;
         subdomain: string;
         description: string | null;
         facilities: string | null;
@@ -25,9 +25,9 @@ export declare class GymsController {
         updatedAt: Date;
     } | null>;
     updateMyGym(req: any, data: any): Promise<{
+        name: string;
         id: string;
         createdAt: Date;
-        name: string;
         subdomain: string;
         description: string | null;
         facilities: string | null;
@@ -55,37 +55,37 @@ export declare class GymsController {
         content: string;
     }>;
     getPlansBySubdomain(subdomain: string): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;
     }[]>;
     getMyPlans(req: any): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;
     }[]>;
     createPlan(req: any, data: any): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;
     }>;
     deletePlan(req: any, id: string): Promise<{
+        name: string;
         id: string;
         gymId: string;
         createdAt: Date;
-        name: string;
         price: number;
         durationMonths: number;
         features: string;

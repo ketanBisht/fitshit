@@ -46,13 +46,16 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
 const jwt_1 = require("@nestjs/jwt");
+const mail_service_1 = require("../mail/mail.service");
 const bcrypt = __importStar(require("bcrypt"));
 let AuthService = class AuthService {
     prisma;
     jwtService;
-    constructor(prisma, jwtService) {
+    mailService;
+    constructor(prisma, jwtService, mailService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
+        this.mailService = mailService;
     }
     async registerAdmin(data) {
         const existingUser = await this.prisma.user.findUnique({ where: { email: data.email } });
@@ -78,6 +81,7 @@ let AuthService = class AuthService {
                 gymId: gym.id,
             },
         });
+        await this.mailService.sendWelcomeEmail(user.email, null, 'ADMIN', undefined, gym.name);
         return { message: 'Admin and Gym registered successfully' };
     }
     async registerMember(data) {
@@ -92,22 +96,38 @@ let AuthService = class AuthService {
             data: {
                 email: data.email,
                 password: hashedPassword,
+                name: data.name || null,
+                phone: data.phone || null,
+                gender: data.gender || null,
                 role: 'MEMBER',
                 gymId: gym.id,
             },
         });
-        const months = parseInt(data.planMonths || '1');
+        let months = 1;
+        let planId = null;
+        if (data.planId) {
+            const plan = await this.prisma.plan.findUnique({ where: { id: data.planId } });
+            if (plan && plan.gymId === gym.id) {
+                months = plan.durationMonths;
+                planId = plan.id;
+            }
+        }
+        else if (data.planMonths) {
+            months = parseInt(data.planMonths || '1');
+        }
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + months);
         await this.prisma.membership.create({
             data: {
                 userId: user.id,
+                planId,
                 startDate,
                 endDate,
                 status: 'ACTIVE',
             }
         });
+        await this.mailService.sendWelcomeEmail(user.email, user.name, 'MEMBER', undefined, gym.name);
         return { message: 'Member registered successfully' };
     }
     async login(data) {
@@ -136,6 +156,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        mail_service_1.MailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

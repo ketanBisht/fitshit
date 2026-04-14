@@ -7,6 +7,19 @@ export declare class DashboardService {
         activeMembers: number;
         expiredMembers: number;
         expiringSoon: number;
+        totalRevenue: number;
+        revenueTrend: {
+            name: string;
+            revenue: number;
+        }[];
+        genderDistribution: {
+            name: string;
+            count: number;
+        }[];
+        planDistribution: {
+            name: string;
+            count: number;
+        }[];
     }>;
     getMemberStats(userId: string): Promise<{
         message: string;

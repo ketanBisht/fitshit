@@ -6,32 +6,37 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowUpRight, Zap } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-const plans = [
-  { months: '1', label: '1 Month', tag: '' },
-  { months: '3', label: '3 Months', tag: 'Popular' },
-  { months: '6', label: '6 Months', tag: 'Value' },
-  { months: '12', label: '1 Year', tag: 'Best' },
-];
+// Removed hardcoded plans
 
 export default function SubdomainSignup() {
   const router = useRouter();
   const params = useParams();
   const subdomain = params?.subdomain as string;
   const [gymName, setGymName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [planMonths, setPlanMonths] = useState('3');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
+  const [planId, setPlanId] = useState('');
+  const [plans, setPlans] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (subdomain) fetchApi(`/gyms/subdomain/${subdomain}`).then(r => setGymName(r.name)).catch(() => {});
+    if (subdomain) {
+      fetchApi(`/gyms/subdomain/${subdomain}`).then(r => setGymName(r.name)).catch(() => {});
+      fetchApi(`/gyms/subdomain/${subdomain}/plans`).then(p => {
+        setPlans(p || []);
+        if (p && p.length > 0) setPlanId(p[0].id);
+      }).catch(() => {});
+    }
   }, [subdomain]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await fetchApi('/auth/register-member', { method: 'POST', body: JSON.stringify({ email, password, subdomain, planMonths }) });
+      await fetchApi('/auth/register-member', { method: 'POST', body: JSON.stringify({ email, password, name, phone, gender, subdomain, planId }) });
       const data = await fetchApi('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, subdomain }) });
       localStorage.setItem('token', data.access_token);
       router.push('/dashboard');
@@ -69,14 +74,16 @@ export default function SubdomainSignup() {
           {/* Plan selector — clean grid, no card wrapping */}
           <p className="label" style={{ marginBottom: '0.875rem' }}>Choose a plan</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem', maxWidth: '360px' }}>
-            {plans.map(p => (
-              <motion.button key={p.months} type="button" onClick={() => setPlanMonths(p.months)}
-                style={{ padding: '1rem', borderRadius: '16px', border: '2px solid', cursor: 'pointer', textAlign: 'left', background: planMonths === p.months ? 'var(--accent)' : 'var(--bg2)', borderColor: planMonths === p.months ? 'var(--accent)' : 'var(--border)', outline: 'none', transition: 'all 0.15s' }}
+            {plans.map((p, i) => (
+              <motion.button key={p.id} type="button" onClick={() => setPlanId(p.id)}
+                style={{ padding: '1rem', borderRadius: '16px', border: '2px solid', cursor: 'pointer', textAlign: 'left', background: planId === p.id ? 'var(--accent)' : 'var(--bg2)', borderColor: planId === p.id ? 'var(--accent)' : 'var(--border)', outline: 'none', transition: 'all 0.15s' }}
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                {p.tag && <p style={{ color: planMonths === p.months ? 'rgba(12,12,12,0.6)' : 'var(--text3)', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>{p.tag}</p>}
-                <p style={{ fontWeight: 700, fontSize: '0.9rem', color: planMonths === p.months ? '#0C0C0C' : 'var(--text)' }}>{p.label}</p>
+                {i === 1 && <p style={{ color: planId === p.id ? 'rgba(12,12,12,0.6)' : 'var(--text3)', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>Popular</p>}
+                <p style={{ fontWeight: 700, fontSize: '0.9rem', color: planId === p.id ? '#0C0C0C' : 'var(--text)' }}>{p.name}</p>
+                <p style={{ fontSize: '0.75rem', color: planId === p.id ? 'rgba(12,12,12,0.7)' : 'var(--text2)', marginTop: '0.2rem' }}>₹{p.price} / {p.durationMonths}mo</p>
               </motion.button>
             ))}
+            {plans.length === 0 && <p className="label">No plans available.</p>}
           </div>
         </motion.div>
 
@@ -90,9 +97,30 @@ export default function SubdomainSignup() {
           </AnimatePresence>
 
           <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="you@example.com" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Name</label>
+                <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input" placeholder="John Doe" />
+              </div>
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Email</label>
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="you@example.com" />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Phone</label>
+                <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="input" placeholder="555-0199" />
+              </div>
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Gender</label>
+                <select className="input" value={gender} onChange={e => setGender(e.target.value)} required>
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
             <div>
               <label className="label" style={{ display: 'block', marginBottom: '0.4rem' }}>Password</label>
@@ -101,12 +129,12 @@ export default function SubdomainSignup() {
             <div style={{ padding: '0.875rem 1.125rem', background: 'var(--accent-s)', border: '1.5px solid var(--accent)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <p className="label">Selected plan</p>
-                <p style={{ fontWeight: 800, color: 'var(--text)', marginTop: '0.125rem' }}>{plans.find(p => p.months === planMonths)?.label}</p>
+                <p style={{ fontWeight: 800, color: 'var(--text)', marginTop: '0.125rem' }}>{plans.find(p => p.id === planId)?.name || 'None'}</p>
               </div>
               <AnimatePresence mode="wait">
-                <motion.span key={planMonths} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }}
+                <motion.span key={planId} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }}
                   style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.75rem', color: 'var(--accent)', letterSpacing: '-0.04em' }}>
-                  {planMonths}M
+                  {plans.find(p => p.id === planId)?.durationMonths || 0}M
                 </motion.span>
               </AnimatePresence>
             </div>

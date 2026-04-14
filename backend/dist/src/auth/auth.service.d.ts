@@ -1,9 +1,11 @@
 import { PrismaService } from '../prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { MailService } from '../mail/mail.service';
 export declare class AuthService {
     private prisma;
     private jwtService;
-    constructor(prisma: PrismaService, jwtService: JwtService);
+    private mailService;
+    constructor(prisma: PrismaService, jwtService: JwtService, mailService: MailService);
     registerAdmin(data: any): Promise<{
         message: string;
     }>;

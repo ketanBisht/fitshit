@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class GymsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   async getGymBySubdomain(subdomain: string) {
     const gym = await this.prisma.gym.findUnique({
@@ -45,17 +49,26 @@ export class GymsService {
       data: { gymId, content }
     });
 
-    // MOCK EMAIL NOTIFICATION SYSTEM FOR ALL MEMBERS
-    const members = await this.prisma.user.findMany({ where: { gymId, role: 'MEMBER' } });
+    // EMAIL NOTIFICATION SYSTEM FOR ACTIVE MEMBERS ONLY
+    const now = new Date();
+    const members = await this.prisma.user.findMany({ 
+      where: { 
+        gymId, 
+        role: 'MEMBER',
+        membership: {
+          status: 'ACTIVE',
+          endDate: { gte: now }
+        }
+      } 
+    });
     const gym = await this.prisma.gym.findUnique({ where: { id: gymId } });
     
-    console.log(`\n================= EMAIL DISPATCH =================`);
-    console.log(`[Gym]: ${gym?.name}`);
-    console.log(`[Subject]: New Announcement from ${gym?.name}`);
-    console.log(`[Content]: "${content}"`);
-    console.log(`[Recipients]: ${members.length} members`);
-    members.forEach(m => console.log(` - Sent to: ${m.email} / ${m.phone || 'no phone'}`));
-    console.log(`==================================================\n`);
+    if (gym && members.length > 0) {
+      console.log(`[Announcements] Found ${members.length} active members for ${gym.name}. Dispatching emails...`);
+      await this.mailService.sendAnnouncementEmails(gym.name, content, members.map(m => m.email));
+    } else {
+      console.log(`[Announcements] No active members found for ${gym?.name || gymId}. Emails will not be sent.`);
+    }
 
     return announcement;
   }
